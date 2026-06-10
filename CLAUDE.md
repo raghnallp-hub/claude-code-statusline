@@ -59,6 +59,9 @@ format_rate_limit() & make_bar() formatters → subprocess git calls → printf 
 - Without effort: `🤖 Model | 🧠 45% | 💰 $0.12 | ⏱️ 5h ████░░░░░░ 65% resets 2:30PM`
 - With effort: `🤖 Model | 💪 high | 🧠 45% | 💰 $0.12 | ⏱️ 5h ████░░░░░░ 65% resets 2:30PM`
 
+**Context Usage Color Thresholds (🧠):**
+- White: <30% | Yellow: 30-44% | Orange: 45-49% | Purple: 50-55% | Red: ≥55%
+
 **Line 2 (Workspace):**
 - `📁 my-project | 🌳 my-feature | 🌿 main +5 ~3` (green +, yellow ~)
 
@@ -139,6 +142,18 @@ See `QA_TEST_REPORT.md` for detailed findings.
 GREEN = "\033[32m"   # Green ANSI code
 YELLOW = "\033[33m"  # Yellow ANSI code
 RED = "\033[31m"     # Red ANSI code
+```
+
+**Context usage color thresholds** (lines 177-186):
+```python
+if pct_value >= 55:
+    color = "\033[31m"      # RED — Change 55 to adjust threshold
+elif pct_value >= 50:
+    color = "\033[35m"      # PURPLE
+elif pct_value >= 45:
+    color = "\033[38;5;208m"  # ORANGE
+elif pct_value >= 30:
+    color = "\033[33m"      # YELLOW
 ```
 
 **Rate-limit color thresholds** (lines 50-54):

@@ -30,6 +30,19 @@ Look for the statusline at the top of the Claude Code terminal. You should see:
 
 ### 3. Test Scenarios
 
+**Test context usage colors:**
+- Watch the 🧠 percentage as you work
+- Colors should change as usage increases:
+  - White: <30%
+  - Yellow: 30-44%
+  - Orange: 45-49%
+  - Purple: 50-55%
+  - Red: ≥55%
+
+**Test rate limit colors:**
+- Watch for color changes in the ⏱️ rate limit display
+- Green (<70%), Yellow (70-89%), Red (≥90%)
+
 **Test git integration:**
 ```sh
 cd /Users/reggie/claude/claude-code-statusline-main
@@ -38,10 +51,6 @@ git add .
 git commit -m "test"
 ```
 The statusline should now show branch info instead of "no branch".
-
-**Test rate limit colors:**
-- Watch for color changes as you work
-- Green (<70%), Yellow (70-89%), Red (≥90%)
 
 **Test with different models:**
 - Try switching models in Claude Code
@@ -83,9 +92,10 @@ Or delete the statusLine config to remove the statusline entirely.
 
 ✅ Statusline displays without errors
 ✅ All fields show correct information
+✅ Context usage colors change at thresholds (yellow/orange/purple/red)
+✅ Rate limit colors display correctly
 ✅ Git integration works when in a repo
 ✅ No performance degradation
-✅ Colors display correctly
 ✅ Effort level shows when set
 
 ## 📊 Feedback
@@ -93,9 +103,10 @@ Or delete the statusLine config to remove the statusline entirely.
 Track any issues:
 - [ ] Statusline not appearing
 - [ ] Incorrect information displayed
+- [ ] Context usage colors not changing at thresholds
+- [ ] Rate limit colors not displaying correctly
 - [ ] Performance problems
 - [ ] Formatting issues
-- [ ] Color issues
 - [ ] Platform-specific problems (if testing on new OS)
 
 ---

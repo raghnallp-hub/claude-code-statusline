@@ -14,7 +14,7 @@ A custom statusline script for [Claude Code](https://claude.ai/claude-code) that
 | Field | Description |
 |---|---|
 | 🤖 Model | Active Claude model name |
-| 🧠 Context | Context window usage percentage |
+| 🧠 Context | Context window usage percentage with color thresholds |
 | 💰 Cost | Cumulative session cost in USD |
 | ⏱️ Rate Limit | 5-hour rate limit usage bar, percentage, and reset time |
 | 📁 Folder | Current working directory name |
@@ -97,6 +97,15 @@ The script reads a JSON object from stdin with the following fields:
 | `worktree.name` | Active worktree name |
 | `worktree.original_cwd` | Current working directory (used to compute repo root) |
 
+### Context Usage Colors
+
+The 🧠 context percentage displays with color thresholds based on usage:
+- White: <30% usage
+- 🟡 Yellow: 30-44% usage
+- 🟠 Orange: 45-49% usage
+- 🟣 Purple: 50-55% usage
+- 🔴 Red: ≥55% usage
+
 ### Rate Limit Colors
 
 The rate-limit bar uses color thresholds:
@@ -107,8 +116,9 @@ The rate-limit bar uses color thresholds:
 ### Editing the Script
 
 Edit `statusline-command.py` to:
-- Change the output format (lines 175-186)
-- Adjust color codes (lines 44-46, 55-58)
+- Change context usage color thresholds (lines 173-186)
+- Adjust rate-limit color codes (lines 50-54, 56-58)
 - Modify bar width (line 24: `width = 10`)
+- Change the output format (lines 204-208)
 - Add or remove fields from the display
-- Enable 7-day limit display (line 189, commented out)
+- Enable 7-day limit display (line 211, commented out)
