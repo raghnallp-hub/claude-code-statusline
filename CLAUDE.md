@@ -41,10 +41,13 @@ format_rate_limit() & make_bar() formatters → subprocess git calls → printf 
 - Falls back to "no branch" if not in repo or git unavailable
 - Subprocess calls: `git rev-parse`, `git branch`, `git diff --cached`, `git diff`
 
-**`get_repo_name(cwd)`** — Computes repository root directory name
-- First tries to find git root (`git rev-parse --show-toplevel`)
-- Falls back to current directory name if not in repo
-- Returns "unknown" if Path() operations fail
+**`get_voice_enabled()`** — Reads voice mode state
+- Voice mode is a persistent client setting, not part of the stdin payload, so this reads `~/.claude/settings.json` directly (`voice.enabled`, falling back to the legacy `voiceEnabled` key)
+- Returns `False` on any error (missing file, malformed JSON, etc.)
+
+**`format_cwd(cwd)`** — Formats the actual working directory
+- Abbreviates `$HOME` to `~`
+- Returns "unknown" if `cwd` is missing or Path() operations fail
 
 **`main()`** — Orchestrates input parsing and output formatting
 - Reads JSON from stdin, validates it's a dict
@@ -58,12 +61,14 @@ format_rate_limit() & make_bar() formatters → subprocess git calls → printf 
 **Line 1 (Session State):**
 - Without effort: `🤖 Model | 🧠 45% | 💰 $0.12 | ⏱️ 5h ████░░░░░░ 65% resets 2:30PM`
 - With effort: `🤖 Model | 💪 high | 🧠 45% | 💰 $0.12 | ⏱️ 5h ████░░░░░░ 65% resets 2:30PM`
+- With voice mode on, ` | 🎙️ Voice` is appended; omitted entirely when off
 
 **Context Usage Color Thresholds (🧠):**
 - White: <30% | Yellow: 30-44% | Orange: 45-49% | Purple: 50-55% | Red: ≥55%
 
 **Line 2 (Workspace):**
-- `📁 my-project | 🌳 my-feature | 🌿 main +5 ~3` (green +, yellow ~)
+- `📍 ~/code/my-project | 🌳 my-feature | 🌿 main +5 ~3` (green +, yellow ~)
+- The 🌳 worktree segment only appears when `worktree.name` (a `--worktree` session) or `workspace.git_worktree` (a linked `git worktree add` checkout) is present in the payload — omitted otherwise to keep the line short
 
 ## Security & Robustness
 
@@ -104,8 +109,9 @@ python3 statusline-command.py <<'EOF'
   "rate_limits": {
     "five_hour": {"used_percentage": 65, "resets_at": 1717584000}
   },
-  "worktree": {"name": "my-feature", "original_cwd": "/tmp"},
-  "effort": {"level": "high"}
+  "cwd": "/tmp",
+  "workspace": {"current_dir": "/tmp"},
+  "worktree": {"name": "my-feature", "path": "/tmp/.claude/worktrees/my-feature", "branch": "worktree-my-feature", "original_cwd": "/tmp/project", "original_branch": "main"}
 }
 EOF
 ```
@@ -199,10 +205,13 @@ The JSON input from Claude Code provides:
 - `rate_limits.five_hour.resets_at` (number) — Unix timestamp of reset time
 - `rate_limits.seven_day.used_percentage` (number) — 7-day limit (optional display)
 - `rate_limits.seven_day.resets_at` (number) — 7-day reset timestamp
-- `worktree.name` (string) — Active worktree name
-- `worktree.original_cwd` (string) — Current working directory path
+- `cwd` / `workspace.current_dir` (string) — Current working directory path
+- `worktree.name` (string, optional) — Present only during `--worktree` sessions
+- `workspace.git_worktree` (string, optional) — Present only inside a linked `git worktree add` checkout
 
-All fields are optional; missing fields trigger safe defaults.
+All fields are optional; missing fields trigger safe defaults. Voice mode is deliberately *not* one of these fields — it's read out-of-band from `~/.claude/settings.json` since it's a client setting rather than session data.
+
+See the [official statusline docs](https://code.claude.com/docs/en/statusline) for the full, authoritative schema — this project's assumptions about field names should be checked against it whenever Claude Code changes what it sends (this is what caused the 📁/🌳 fields to show "unknown"/"no worktree" before the schema was corrected against a real captured payload).
 
 ## Installation
 

@@ -8,7 +8,7 @@ A custom statusline script for [Claude Code](https://claude.ai/claude-code) that
 
 ```
 🤖 Claude Sonnet 4.6 | 🧠 12% | 💰 $0.04 | ⏱️ 5h ████░░░░░░ 42% resets 2:00PM | 🎙️ Voice
-📁 my-project | 📍 ~/code/my-project | 🌳 my-feature | 🌿 main +42 -7
+📍 ~/code/my-project | 🌳 my-feature | 🌿 main +42 -7
 ```
 
 | Field | Description |
@@ -18,9 +18,8 @@ A custom statusline script for [Claude Code](https://claude.ai/claude-code) that
 | 💰 Cost | Cumulative session cost in USD |
 | ⏱️ Rate Limit | 5-hour rate limit usage bar, percentage, and reset time |
 | 🎙️ Voice | Shown only when voice mode is currently enabled (read from `~/.claude/settings.json`) |
-| 📁 Folder | Repository root directory name |
 | 📍 Path | Actual current working directory, with `$HOME` abbreviated to `~` |
-| 🌳 Worktree | Active git worktree name |
+| 🌳 Worktree | Shown only when relevant: the `--worktree` session name, or a linked `git worktree add` checkout name. Omitted entirely otherwise, to keep the line short |
 | 🌿 Branch | Current git branch with lines added/removed |
 
 ## Prerequisites
@@ -96,8 +95,9 @@ The script reads a JSON object from stdin with the following fields:
 | `rate_limits.five_hour.resets_at` | Unix timestamp when 5-hour limit resets |
 | `rate_limits.seven_day.used_percentage` | 7-day rate limit usage percentage (available for optional display) |
 | `rate_limits.seven_day.resets_at` | Unix timestamp when 7-day limit resets (available for optional display) |
-| `worktree.name` | Active worktree name |
-| `worktree.original_cwd` | Current working directory (used to compute repo root and the 📍 path) |
+| `cwd`, `workspace.current_dir` | Current working directory (used for the 📍 path). Both hold the same value; `workspace.current_dir` is read first |
+| `worktree.name` | Active worktree name, present only during `--worktree` sessions |
+| `workspace.git_worktree` | Worktree name for a linked `git worktree add` checkout (fallback when `worktree.name` is absent) |
 
 Voice mode state isn't part of the stdin payload — it's a persistent client setting, so the script reads it directly from `~/.claude/settings.json` (`voice.enabled` or the legacy `voiceEnabled` key) each time it runs.
 

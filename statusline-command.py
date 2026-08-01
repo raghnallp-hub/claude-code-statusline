@@ -156,28 +156,6 @@ def format_cwd(cwd):
         return "unknown"
 
 
-def get_repo_name(cwd):
-    """Get repository root directory name."""
-    try:
-        if not cwd:
-            return "unknown"
-
-        cwd_path = Path(cwd)
-        # Try to find git root
-        try:
-            repo_root = subprocess.check_output(
-                ["git", "rev-parse", "--show-toplevel"],
-                cwd=cwd,
-                stderr=subprocess.DEVNULL,
-                text=True
-            ).strip()
-            return Path(repo_root).name
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return cwd_path.name
-    except Exception:
-        return "unknown"
-
-
 def main():
     """Parse JSON from stdin and output formatted statusline."""
     try:
@@ -229,10 +207,18 @@ def main():
         except (ValueError, TypeError):
             cost_display = "$0.00"
 
-        worktree = safely_get(data, "worktree", "name", default=None)
-        worktree_str = str(worktree)[:100] if worktree else "no worktree"
+        # worktree.name: Claude Code `--worktree` sessions.
+        # workspace.git_worktree: any linked `git worktree add` checkout.
+        # Absent in the common case (no worktree in play) -- omit the segment then.
+        worktree = (
+            safely_get(data, "worktree", "name", default=None)
+            or safely_get(data, "workspace", "git_worktree", default=None)
+        )
+        worktree_str = str(worktree)[:100] if worktree else None
 
-        current_dir = safely_get(data, "worktree", "original_cwd", default=None)
+        current_dir = safely_get(data, "workspace", "current_dir", default=None) or safely_get(
+            data, "cwd", default=None
+        )
 
         rl_5h_pct = safely_get(data, "rate_limits", "five_hour", "used_percentage")
         rl_5h_reset = safely_get(data, "rate_limits", "five_hour", "resets_at")
@@ -242,9 +228,6 @@ def main():
 
         # Get git info
         git_str = get_git_info()
-
-        # Get repo name
-        dir_display = get_repo_name(current_dir)
 
         # Get actual working directory (abbreviated)
         cwd_display = format_cwd(current_dir)
@@ -258,7 +241,8 @@ def main():
         else:
             line1 = f"🤖 {model} | 🧠 {used_display} | 💰 {cost_display} | ⏱️ {rate_limit_str}{voice_segment}"
 
-        line2 = f"📁 {dir_display} | 📍 {cwd_display} | 🌳 {worktree_str} | 🌿 {git_str}"
+        worktree_segment = f" | 🌳 {worktree_str}" if worktree_str else ""
+        line2 = f"📍 {cwd_display}{worktree_segment} | 🌿 {git_str}"
 
         print(line1)
         print(line2)
