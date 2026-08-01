@@ -73,55 +73,50 @@ def format_rate_limit(percentage, reset_ts, label):
 
 
 def get_git_info():
-    """Get current git branch and diff stats."""
+    """Get current git branch and diff stats via a single `git status` call.
+
+    Combines what used to be 4 separate git subprocess spawns (rev-parse,
+    branch, diff --cached, diff) into one `git status --porcelain=v2 --branch`
+    call, since each spawn costs ~20-25ms and this runs on every statusline
+    refresh.
+    """
     try:
-        # Check if in git repo
-        subprocess.run(
-            ["git", "rev-parse", "--git-dir"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=True
-        )
-
-        # Get branch name
-        try:
-            branch = subprocess.check_output(
-                ["git", "branch", "--show-current"],
-                stderr=subprocess.DEVNULL,
-                text=True
-            ).strip()
-        except subprocess.CalledProcessError:
-            branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                stderr=subprocess.DEVNULL,
-                text=True
-            ).strip()
-
-        # Get staged changes
-        staged_output = subprocess.check_output(
-            ["git", "diff", "--cached", "--numstat"],
+        output = subprocess.check_output(
+            ["git", "status", "--porcelain=v2", "--branch"],
             stderr=subprocess.DEVNULL,
             text=True
         )
-        staged = len(staged_output.strip().split('\n')) if staged_output.strip() else 0
-
-        # Get modified changes
-        modified_output = subprocess.check_output(
-            ["git", "diff", "--numstat"],
-            stderr=subprocess.DEVNULL,
-            text=True
-        )
-        modified = len(modified_output.strip().split('\n')) if modified_output.strip() else 0
-
-        git_str = branch
-        if staged > 0:
-            git_str += f" \033[32m+{staged}\033[0m"
-        if modified > 0:
-            git_str += f" \033[33m~{modified}\033[0m"
-
-        return git_str
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "no branch"
+
+    branch = None
+    staged = 0
+    modified = 0
+
+    for line in output.splitlines():
+        if line.startswith("# branch.head "):
+            branch = line[len("# branch.head "):].strip()
+        elif line and line[0] in ("1", "2", "u"):
+            # Ordinary/renamed/unmerged entry: "<type> <XY> ..." -- XY is the
+            # two-char index(staged)/worktree(unstaged) status, '.' = clean.
+            parts = line.split(" ", 2)
+            if len(parts) >= 2 and len(parts[1]) == 2:
+                index_status, worktree_status = parts[1][0], parts[1][1]
+                if index_status != ".":
+                    staged += 1
+                if worktree_status != ".":
+                    modified += 1
+
+    if not branch or branch == "(detached)":
+        branch = "detached" if branch else "no branch"
+
+    git_str = branch
+    if staged > 0:
+        git_str += f" \033[32m+{staged}\033[0m"
+    if modified > 0:
+        git_str += f" \033[33m~{modified}\033[0m"
+
+    return git_str
 
 
 def get_voice_enabled():
