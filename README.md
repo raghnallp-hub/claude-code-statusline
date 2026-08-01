@@ -71,6 +71,25 @@ For a **project-level** setup, add the same block to `.claude/settings.json` in 
 
 **3. Start Claude Code** — the statusline will appear automatically.
 
+### Keeping it fresh during idle periods
+
+Claude Code re-runs your statusline script on specific events: a new assistant message, `/compact` finishing, a permission-mode change, or a vim-mode toggle. Anything else that changes state out-of-band — like toggling voice mode with `/voice` — won't be reflected until one of those triggers fires next.
+
+If you want segments like 🎙️ Voice to update promptly even while idle, add `refreshInterval` (seconds) to the `statusLine` block:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 ~/.claude/statusline-command.py",
+    "padding": 0,
+    "refreshInterval": 2
+  }
+}
+```
+
+This polls the script on a timer in addition to the event-driven triggers. See [Performance](#performance) below for the cost of doing this.
+
 **Note:** On macOS and Linux, the shebang allows you to run directly:
 ```sh
 ~/.claude/statusline-command.py < input.json
@@ -120,9 +139,24 @@ The rate-limit bar uses color thresholds:
 ### Editing the Script
 
 Edit `statusline-command.py` to:
-- Change context usage color thresholds (lines 173-186)
-- Adjust rate-limit color codes (lines 50-54, 56-58)
-- Modify bar width (line 24: `width = 10`)
-- Change the output format (lines 204-208)
+- Change context usage color thresholds (`main()`, around line 184)
+- Adjust rate-limit color codes (`format_rate_limit()`, around line 56)
+- Modify bar width (`make_bar()`, line 37: `width = 10`)
+- Change the output format (`line1`/`line2` at the end of `main()`)
 - Add or remove fields from the display
-- Enable 7-day limit display (line 211, commented out)
+- Add 7-day rate limit display alongside 5-hour (both are already parsed from `rate_limits.seven_day.*`; `format_rate_limit()` is reusable for it)
+
+## Performance
+
+Each run costs roughly:
+
+| Cost | Approx. time |
+|---|---|
+| Python interpreter startup | ~30ms |
+| One `git status --porcelain=v2 --branch` call (branch + staged/modified counts in a single subprocess) | ~25-60ms depending on repo size |
+| JSON parsing and formatting | negligible |
+| **Total** | **~80-100ms per run** |
+
+Earlier versions spawned 4 separate `git` subprocesses (`rev-parse`, `branch`, `diff --cached`, `diff`); these are now combined into one `git status` call, cutting per-run time by roughly 40%.
+
+With a 2-second `refreshInterval`, that's on the order of a 4-5% single-core duty cycle in short bursts — not sustained load, and comparable to what a git-aware shell prompt already does on every keystroke. If you want it lighter still, raise `refreshInterval` (e.g. to 5 or 10 seconds) at the cost of segments like 🎙️ Voice taking longer to catch up after an out-of-band change.
