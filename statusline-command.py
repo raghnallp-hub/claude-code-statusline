@@ -124,6 +124,38 @@ def get_git_info():
         return "no branch"
 
 
+def get_voice_enabled():
+    """Check whether voice mode is currently enabled via Claude Code's global settings.json."""
+    try:
+        settings_path = Path.home() / ".claude" / "settings.json"
+        with open(settings_path) as f:
+            settings = json.load(f)
+        if not isinstance(settings, dict):
+            return False
+        return bool(
+            safely_get(settings, "voice", "enabled", default=False)
+            or settings.get("voiceEnabled", False)
+        )
+    except Exception:
+        return False
+
+
+def format_cwd(cwd):
+    """Format the actual working directory, abbreviating the home dir to ~."""
+    try:
+        if not cwd:
+            return "unknown"
+        home = str(Path.home())
+        cwd_str = str(cwd)
+        if cwd_str == home:
+            cwd_str = "~"
+        elif cwd_str.startswith(home + os.sep):
+            cwd_str = "~" + cwd_str[len(home):]
+        return cwd_str[:100]
+    except Exception:
+        return "unknown"
+
+
 def get_repo_name(cwd):
     """Get repository root directory name."""
     try:
@@ -214,13 +246,19 @@ def main():
         # Get repo name
         dir_display = get_repo_name(current_dir)
 
+        # Get actual working directory (abbreviated)
+        cwd_display = format_cwd(current_dir)
+
+        # Get voice mode indicator
+        voice_segment = " | 🎙️ Voice" if get_voice_enabled() else ""
+
         # Build output
         if effort:
-            line1 = f"🤖 {model} | 💪 {effort} | 🧠 {used_display} | 💰 {cost_display} | ⏱️ {rate_limit_str}"
+            line1 = f"🤖 {model} | 💪 {effort} | 🧠 {used_display} | 💰 {cost_display} | ⏱️ {rate_limit_str}{voice_segment}"
         else:
-            line1 = f"🤖 {model} | 🧠 {used_display} | 💰 {cost_display} | ⏱️ {rate_limit_str}"
+            line1 = f"🤖 {model} | 🧠 {used_display} | 💰 {cost_display} | ⏱️ {rate_limit_str}{voice_segment}"
 
-        line2 = f"📁 {dir_display} | 🌳 {worktree_str} | 🌿 {git_str}"
+        line2 = f"📁 {dir_display} | 📍 {cwd_display} | 🌳 {worktree_str} | 🌿 {git_str}"
 
         print(line1)
         print(line2)
