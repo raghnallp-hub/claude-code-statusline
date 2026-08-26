@@ -7,8 +7,8 @@ A custom statusline script for [Claude Code](https://claude.ai/claude-code) that
 ## What It Shows
 
 ```
-🤖 Claude Sonnet 4.6 | 🧠 12% | 💰 $0.04 | ⏱️ 5h ████░░░░░░ 42% resets 2:00PM | 🎙️ Voice
-📍 ~/code/my-project | 🌳 my-feature | 🌿 main +42 -7
+🤖 Sonnet 5 | 💪 medium | 🧠 21% | 💰 $12.33 | ⏱️ 5h ████████░░ 8% resets 6:30PM | 🎙️ Voice
+📍 ~/claude/claude-code-statusline-main | 🌿 main
 ```
 
 | Field | Description |
@@ -160,3 +160,15 @@ Each run costs roughly:
 Earlier versions spawned 4 separate `git` subprocesses (`rev-parse`, `branch`, `diff --cached`, `diff`); these are now combined into one `git status` call, cutting per-run time by roughly 40%.
 
 With a 2-second `refreshInterval`, that's on the order of a 4-5% single-core duty cycle in short bursts — not sustained load, and comparable to what a git-aware shell prompt already does on every keystroke. If you want it lighter still, raise `refreshInterval` (e.g. to 5 or 10 seconds) at the cost of segments like 🎙️ Voice taking longer to catch up after an out-of-band change.
+
+## Credits
+
+This project started from [danielmackay/claude-code-statusline](https://github.com/danielmackay/claude-code-statusline) — a 3-file `sh`/`jq` statusline script (`README.md`, `screenshot.png`, `statusline-command.sh`) with the same two-line layout and 🤖/🧠/💰/⏱️/📁/🌳/🌿 field set. That upstream repo carries no LICENSE file, so no explicit terms are granted; this fork is shared in that same spirit, with full credit to the original author for the concept and initial design.
+
+**What's changed since:**
+- Rewritten from `sh` + `jq` to dependency-free Python 3 (no `jq` requirement)
+- Fixed the directory/worktree fields against the real Claude Code statusline JSON schema (the assumed schema silently showed "unknown" and "no worktree" outside of `--worktree` sessions — see [git history](https://github.com/raghnallp-hub/claude-code-statusline/commits/main) for the debugging story)
+- Added a 🎙️ Voice indicator, read from `~/.claude/settings.json` since voice mode isn't part of the stdin payload
+- Dropped the redundant 📁 repo-name field in favor of a single 📍 path segment (with `$HOME` abbreviated to `~`), and made the 🌳 worktree segment appear only when actually relevant
+- Consolidated `get_git_info()` from 4 git subprocess spawns down to 1 (`git status --porcelain=v2 --branch`), cutting per-run latency by roughly 40%
+- Added a `refreshInterval`-aware "Performance" and "Keeping it fresh during idle periods" section, and a 52+/53-test security/robustness test suite (`test_statusline.py`)
