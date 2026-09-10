@@ -1,4 +1,4 @@
-# Claude Code Statusline
+# Claude Code Statusline - cross platform python based
 
 A custom statusline script for [Claude Code](https://claude.ai/claude-code) that displays real-time session information in your terminal.
 
